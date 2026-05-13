@@ -1,0 +1,325 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  DELETION_REQUESTED
+  DELETED
+}
+
+enum AuthProvider {
+  GUEST
+  EMAIL
+}
+
+enum CharacterClass {
+  APPRENTICE
+  DEBUGGER
+  GUARDIAN
+  CLEAN_CODE_ARCHITECT
+  TOKEN_BERSERKER
+}
+
+enum WorkType {
+  FEATURE
+  BUGFIX
+  REFACTOR
+  TEST
+  DOCS
+  UI
+  ARCHITECTURE
+  DEVOPS
+  RESEARCH
+  UNKNOWN
+}
+
+enum ResultStatus {
+  SUCCESS
+  PARTIAL
+  FAILED
+  CANCELLED
+  UNKNOWN
+}
+
+enum DurationBucket {
+  UNDER_5M
+  M_5_15
+  M_15_30
+  M_30_60
+  H_1_2
+  H_2_PLUS
+}
+
+enum TokenBucket {
+  NONE
+  TINY
+  SMALL
+  MEDIUM
+  LARGE
+  HUGE
+}
+
+enum CountBucket {
+  NONE
+  ONE
+  FEW
+  MANY
+  MASSIVE
+}
+
+enum ConfidenceBand {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum SyncEntityType {
+  CHARACTER
+  SESSION_SUMMARY
+  SETTINGS
+  ACHIEVEMENT
+}
+
+model User {
+  id               String              @id @default(uuid())
+  email            String?             @unique
+  emailVerifiedAt  DateTime?
+  nickname         String?
+  settings         Json?
+  isGuest          Boolean             @default(false)
+  status           UserStatus          @default(ACTIVE)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  deletedAt        DateTime?
+
+  accounts         AuthAccount[]
+  refreshTokens    RefreshToken[]
+  character        Character?
+  sessions         SessionSummary[]
+  achievements     UserAchievement[]
+  syncStates       SyncState[]
+  devices          Device[]
+  privacyConsents  PrivacyConsent[]
+  deleteAudits     DeletedDataAudit[]
+}
+
+model AuthAccount {
+  id             String       @id @default(uuid())
+  userId         String
+  provider       AuthProvider
+  providerUserId String
+  passwordHash   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+model RefreshToken {
+  id             String    @id @default(uuid())
+  userId         String
+  tokenHash      String    @unique
+  deviceId       String?
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  replacedByHash String?
+  createdAt      DateTime  @default(now())
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device         Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Character {
+  id             String                @id @default(uuid())
+  userId         String                @unique
+  displayName    String?
+  level          Int                   @default(1)
+  exp            Int                   @default(0)
+  class          CharacterClass        @default(APPRENTICE)
+  syncVersion    Int                   @default(1)
+  updatedAt      DateTime              @updatedAt
+  createdAt      DateTime              @default(now())
+  deletedAt      DateTime?
+
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stats          CharacterStats?
+  evolutions     CharacterEvolution[]
+}
+
+model CharacterStats {
+  id             String     @id @default(uuid())
+  characterId    String     @unique
+  logic          Int        @default(0)
+  debug          Int        @default(0)
+  architecture   Int        @default(0)
+  design         Int        @default(0)
+  stability      Int        @default(0)
+  velocity       Int        @default(0)
+  creativity     Int        @default(0)
+  efficiency     Int        @default(0)
+  stress         Int        @default(0)
+  updatedAt      DateTime   @updatedAt
+
+  character      Character  @relation(fields: [characterId], references: [id], onDelete: Cascade)
+}
+
+model CharacterEvolution {
+  id               String          @id @default(uuid())
+  characterId      String
+  candidateClass   CharacterClass
+  progress         Int             @default(0)
+  reasonSummary    String?
+  createdAt        DateTime        @default(now())
+
+  character        Character       @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
+}
+
+model SessionSummary {
+  id                       String                  @id @default(uuid())
+  sessionId                String
+  userId                   String
+  agentType                String
+  workType                 WorkType
+  startedAt                DateTime
+  endedAt                  DateTime?
+  durationBucket           DurationBucket
+  tokenBucket              TokenBucket?
+  tokenRange               Json?
+  changedFileCountBucket   CountBucket
+  addedLineBucket          CountBucket
+  deletedLineBucket        CountBucket
+  testRunCount             Int                     @default(0)
+  buildRunCount            Int                     @default(0)
+  resultStatus             ResultStatus
+  expGained                Int                     @default(0)
+  statDeltas               Json
+  evolutionProgressDelta   Json?
+  confidence               ConfidenceBand
+  excludedFromCompetitive  Boolean                 @default(false)
+  sourceProvider           String?
+  parserVersion            String?
+  projectHash              String?
+  localOnlyProjectId       String?
+  /// Optional only when the user explicitly permits a non-sensitive project alias.
+  projectAlias             String?
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  deletedAt                DateTime?
+
+  user                     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workTypeDistribution     WorkTypeDistribution?
+
+  @@unique([userId, sessionId])
+  @@index([userId, startedAt])
+  @@index([projectHash])
+  @@index([localOnlyProjectId])
+}
+
+model WorkTypeDistribution {
+  id               String          @id @default(uuid())
+  sessionSummaryId String          @unique
+  distribution     Json
+  createdAt        DateTime        @default(now())
+
+  sessionSummary   SessionSummary  @relation(fields: [sessionSummaryId], references: [id], onDelete: Cascade)
+}
+
+model Achievement {
+  id             String             @id @default(uuid())
+  code           String             @unique
+  title          String
+  description    String
+  metadata       Json?
+  isActive       Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  users          UserAchievement[]
+}
+
+model UserAchievement {
+  id             String       @id @default(uuid())
+  userId         String
+  achievementId  String
+  unlockedAt     DateTime     @default(now())
+  progress       Json?
+  source         String?
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement    Achievement  @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+model SyncState {
+  id              String         @id @default(uuid())
+  userId          String
+  entityType      SyncEntityType
+  entityId        String
+  syncVersion     Int            @default(1)
+  idempotencyKey  String?
+  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime       @default(now())
+  deletedAt       DateTime?
+
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, entityType, entityId])
+  @@unique([userId, idempotencyKey])
+}
+
+model Device {
+  id             String          @id @default(uuid())
+  userId         String
+  deviceLabel    String?
+  deviceHash     String?
+  lastSeenAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokens  RefreshToken[]
+
+  @@index([userId])
+}
+
+model PrivacyConsent {
+  id             String    @id @default(uuid())
+  userId         String
+  consentType    String
+  granted        Boolean
+  version        String
+  createdAt      DateTime  @default(now())
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model DeletedDataAudit {
+  id             String    @id @default(uuid())
+  userId         String?
+  reason         String
+  requestedAt    DateTime  @default(now())
+  completedAt    DateTime?
+  metadata       Json?
+
+  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}
