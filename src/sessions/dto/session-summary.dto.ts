@@ -3,10 +3,10 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
-  IsObject,
   IsOptional,
   IsString,
   Length,
+  Matches,
   Max,
   Min,
   ValidateNested,
@@ -63,18 +63,6 @@ export enum ConfidenceBandDto {
   LOW = 'LOW',
   MEDIUM = 'MEDIUM',
   HIGH = 'HIGH',
-}
-
-export class TokenRangeDto {
-  @IsInt()
-  @Min(0)
-  @Max(10_000_000)
-  min: number;
-
-  @IsInt()
-  @Min(0)
-  @Max(10_000_000)
-  max: number;
 }
 
 export class StatDeltasDto {
@@ -159,13 +147,15 @@ export class EvolutionProgressDeltaDto {
   tokenBerserker?: number;
 }
 
-export class SessionSummaryUploadDto {
+export class UploadSessionSummaryDto {
   @IsString()
   @Length(8, 128)
+  @Matches(/^[A-Za-z0-9:_-]+$/)
   sessionId: string;
 
   @IsString()
   @Length(1, 40)
+  @Matches(/^[A-Za-z0-9:_-]+$/)
   agentType: string;
 
   @IsEnum(WorkTypeDto)
@@ -181,14 +171,8 @@ export class SessionSummaryUploadDto {
   @IsEnum(DurationBucketDto)
   durationBucket: DurationBucketDto;
 
-  @IsOptional()
   @IsEnum(TokenBucketDto)
-  tokenBucket?: TokenBucketDto;
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => TokenRangeDto)
-  tokenRange?: TokenRangeDto;
+  tokenBucket: TokenBucketDto;
 
   @IsEnum(CountBucketDto)
   changedFileCountBucket: CountBucketDto;
@@ -232,30 +216,33 @@ export class SessionSummaryUploadDto {
   @IsOptional()
   @IsString()
   @Length(1, 40)
+  @Matches(/^[A-Za-z0-9:._-]+$/)
   sourceProvider?: string;
 
   @IsOptional()
   @IsString()
   @Length(1, 40)
+  @Matches(/^[A-Za-z0-9:._-]+$/)
   parserVersion?: string;
 
   @IsOptional()
   @IsString()
   @Length(16, 128)
+  @Matches(/^[A-Fa-f0-9:_-]+$/)
   projectHash?: string;
 
   @IsOptional()
   @IsString()
   @Length(8, 128)
+  @Matches(/^[A-Za-z0-9:_-]+$/)
   localOnlyProjectId?: string;
-
-  // Only accepted when the user explicitly permits non-sensitive aliases.
-  @IsOptional()
-  @IsString()
-  @Length(1, 80)
-  projectAlias?: string;
-
-  @IsOptional()
-  @IsObject()
-  workTypeDistribution?: Record<string, number>;
 }
+
+export class DeleteSessionDto {
+  @IsString()
+  @Length(36, 36)
+  @Matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
+  id: string;
+}
+
+export { UploadSessionSummaryDto as SessionSummaryUploadDto };

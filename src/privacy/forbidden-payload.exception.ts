@@ -1,12 +1,12 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 
 export class ForbiddenPayloadException extends HttpException {
-  constructor(paths: string[]) {
+  constructor(reasons: string[]) {
     super(
       {
-        errorCode: 'FORBIDDEN_PAYLOAD',
-        message: 'Request payload contains forbidden or non-sync-safe fields',
-        fields: paths,
+        errorCode: 'PRIVACY_GUARD_REJECTED',
+        message: 'Request payload contains data that is not privacy-safe for server sync.',
+        reasons,
       },
       HttpStatus.BAD_REQUEST,
     );

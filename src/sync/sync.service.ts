@@ -1,8 +1,53 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { CharactersService } from '../characters/characters.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SessionsService } from '../sessions/sessions.service';
-import { SyncPushRequestDto } from './dto/sync.dto';
+import { SyncPushDto } from './dto/sync.dto';
+
+const SYNC_CHARACTER_SELECT = {
+  id: true,
+  userId: true,
+  displayName: true,
+  level: true,
+  exp: true,
+  class: true,
+  evolution: true,
+  appearance: true,
+  unlockedItems: true,
+  syncVersion: true,
+  createdAt: true,
+  updatedAt: true,
+  stats: true,
+} satisfies Prisma.CharacterSelect;
+
+const SYNC_SESSION_SELECT = {
+  id: true,
+  sessionId: true,
+  userId: true,
+  agentType: true,
+  workType: true,
+  startedAt: true,
+  endedAt: true,
+  durationBucket: true,
+  tokenBucket: true,
+  changedFileCountBucket: true,
+  addedLineBucket: true,
+  deletedLineBucket: true,
+  testRunCount: true,
+  buildRunCount: true,
+  resultStatus: true,
+  expGained: true,
+  statDeltas: true,
+  evolutionProgressDelta: true,
+  confidence: true,
+  sourceProvider: true,
+  parserVersion: true,
+  projectHash: true,
+  localOnlyProjectId: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.SessionSummarySelect;
 
 @Injectable()
 export class SyncService {
@@ -13,15 +58,21 @@ export class SyncService {
   ) {}
 
   async pull(userId: string) {
-    const [character, sessions, settings, syncStates] = await Promise.all([
-      this.prisma.character.findUnique({
-        where: { userId },
-        include: { stats: true },
+    const [character, sessions, achievements, settings, syncStates] =
+      await Promise.all([
+      this.prisma.character.findFirst({
+        where: { userId, deletedAt: null },
+        select: SYNC_CHARACTER_SELECT,
       }),
       this.prisma.sessionSummary.findMany({
         where: { userId, deletedAt: null },
         orderBy: { updatedAt: 'desc' },
         take: 200,
+        select: SYNC_SESSION_SELECT,
+      }),
+      this.prisma.userAchievement.findMany({
+        where: { userId },
+        include: { achievement: true },
       }),
       this.prisma.user.findUnique({
         where: { id: userId },
@@ -33,14 +84,25 @@ export class SyncService {
     return {
       policy: 'last-write-wins',
       serverTime: new Date().toISOString(),
+      syncVersion: this.resolveSyncVersion(syncStates),
       character,
       sessionSummaries: sessions,
+      achievements: achievements.map((userAchievement) => ({
+        id: userAchievement.id,
+        achievementId: userAchievement.achievementId,
+        achievementCode: userAchievement.achievement.code,
+        title: userAchievement.achievement.title,
+        description: userAchievement.achievement.description,
+        unlockedAt: userAchievement.unlockedAt,
+        progress: userAchievement.progress,
+        source: userAchievement.source,
+      })),
       settings: settings?.settings ?? null,
       syncStates,
     };
   }
 
-  async push(userId: string, dto: SyncPushRequestDto) {
+  async push(userId: string, dto: SyncPushDto) {
     if (dto.idempotencyKey) {
       const existing = await this.prisma.syncState.findFirst({
         where: { userId, idempotencyKey: dto.idempotencyKey },
@@ -96,8 +158,18 @@ export class SyncService {
     return {
       status: 'ok',
       policy: 'last-write-wins',
+      syncVersion: this.resolveResultSyncVersion(results),
       updatedAt: new Date().toISOString(),
       results,
     };
+  }
+
+  private resolveSyncVersion(syncStates: Array<{ syncVersion: number }>) {
+    return Math.max(1, ...syncStates.map((state) => state.syncVersion));
+  }
+
+  private resolveResultSyncVersion(results: Record<string, unknown>) {
+    const character = results.character as { syncVersion?: number } | undefined;
+    return character?.syncVersion ?? 1;
   }
 }

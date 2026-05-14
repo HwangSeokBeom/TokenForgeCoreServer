@@ -148,6 +148,9 @@ model Character {
   level          Int                   @default(1)
   exp            Int                   @default(0)
   class          CharacterClass        @default(APPRENTICE)
+  evolution      Json?
+  appearance     Json?
+  unlockedItems  Json?
   syncVersion    Int                   @default(1)
   updatedAt      DateTime              @updatedAt
   createdAt      DateTime              @default(now())
@@ -197,8 +200,7 @@ model SessionSummary {
   startedAt                DateTime
   endedAt                  DateTime?
   durationBucket           DurationBucket
-  tokenBucket              TokenBucket?
-  tokenRange               Json?
+  tokenBucket              TokenBucket
   changedFileCountBucket   CountBucket
   addedLineBucket          CountBucket
   deletedLineBucket        CountBucket
@@ -214,28 +216,16 @@ model SessionSummary {
   parserVersion            String?
   projectHash              String?
   localOnlyProjectId       String?
-  /// Optional only when the user explicitly permits a non-sensitive project alias.
-  projectAlias             String?
   createdAt                DateTime                @default(now())
   updatedAt                DateTime                @updatedAt
   deletedAt                DateTime?
 
   user                     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workTypeDistribution     WorkTypeDistribution?
 
   @@unique([userId, sessionId])
   @@index([userId, startedAt])
   @@index([projectHash])
   @@index([localOnlyProjectId])
-}
-
-model WorkTypeDistribution {
-  id               String          @id @default(uuid())
-  sessionSummaryId String          @unique
-  distribution     Json
-  createdAt        DateTime        @default(now())
-
-  sessionSummary   SessionSummary  @relation(fields: [sessionSummaryId], references: [id], onDelete: Cascade)
 }
 
 model Achievement {

@@ -1,10 +1,19 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   CurrentUser,
   RequestUser,
 } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SessionSummaryUploadDto } from './dto/session-summary.dto';
+import { UploadSessionSummaryDto } from './dto/session-summary.dto';
 import { SessionsService } from './sessions.service';
 
 @UseGuards(JwtAuthGuard)
@@ -15,7 +24,7 @@ export class SessionsController {
   @Post('summary')
   createSummary(
     @CurrentUser() user: RequestUser,
-    @Body() dto: SessionSummaryUploadDto,
+    @Body() dto: UploadSessionSummaryDto,
   ) {
     return this.sessions.createSummary(user.sub, dto);
   }
@@ -26,7 +35,10 @@ export class SessionsController {
   }
 
   @Delete('summary/:id')
-  delete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+  delete(
+    @CurrentUser() user: RequestUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
     return this.sessions.deleteSummary(user.sub, id);
   }
 }

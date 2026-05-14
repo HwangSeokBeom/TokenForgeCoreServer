@@ -22,9 +22,13 @@ The Unity client is responsible for local analysis and first-pass sanitization. 
 
 ## Privacy-First Rules
 
-Never send these fields to the server: `prompt`, `rawPrompt`, `code`, `rawCode`, `log`, `rawLog`, `terminalOutput`, `stdout`, `stderr`, `diff`, `patch`, `filePath`, `absolutePath`, `gitRemoteUrl`, `branchNameRaw`, `commitMessageRaw`, `apiKey`, `secret`, `rawToken`, `apiToken`, `accessToken`, `secretToken`.
+Never send these fields to the server: `prompt`, `rawPrompt`, `code`, `rawCode`, `sourceCode`, `log`, `rawLog`, `terminalOutput`, `stdout`, `stderr`, `absolutePath`, `filePath`, `pathRaw`, `remoteUrl`, `gitRemote`, `branchName`, `rawBranchName`, `commitMessage`, `rawCommitMessage`, `diff`, `patch`, `command`, `commandText`, `apiKey`, `secret`, `passwordRaw`, `tokenRaw`, `rawToken`, `apiToken`, `accessToken`, `secretToken`.
 
-`refreshToken` is accepted only by auth endpoints. `tokenBucket` and `tokenRange` are safe aggregate fields and are allowed.
+`refreshToken` is accepted only by auth endpoints. `tokenBucket` is the only token aggregate accepted by session summary sync.
+
+## Session Summary Idempotency
+
+`POST /sessions/summary` is idempotent per `userId + sessionId`. Re-uploading the same `sessionId` for the same user updates the existing safe aggregate row, clears a prior soft-delete for that row, and increments its sync state. Raw prompts, code, logs, paths, remotes, branches, commits, diffs, patches, command text, stdout, and stderr are never accepted or returned.
 
 ## Environment
 

@@ -30,18 +30,35 @@ const validSummary: SessionSummaryUploadDto = {
 };
 
 describe('SessionsService', () => {
-  it('maps duplicate sessionId to VALIDATION_FAILED', async () => {
+  it('upserts duplicate sessionId for idempotent uploads', async () => {
     const prisma = {
       sessionSummary: {
         aggregate: jest.fn().mockResolvedValue({ _sum: { expGained: 0 } }),
-        create: jest.fn().mockRejectedValue({ code: 'P2002' }),
+        upsert: jest.fn().mockResolvedValue({
+          id: 'summary-1',
+          userId: 'user-1',
+          sessionId: validSummary.sessionId,
+        }),
       },
-      syncState: { upsert: jest.fn() },
+      syncState: { upsert: jest.fn().mockResolvedValue({}) },
     };
     const service = new SessionsService(prisma as any);
 
-    await expect(service.createSummary('user-1', validSummary)).rejects.toThrow(
-      BadRequestException,
+    await expect(service.createSummary('user-1', validSummary)).resolves.toEqual(
+      expect.objectContaining({
+        id: 'summary-1',
+        sessionId: validSummary.sessionId,
+      }),
+    );
+    expect(prisma.sessionSummary.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId_sessionId: {
+            userId: 'user-1',
+            sessionId: validSummary.sessionId,
+          },
+        },
+      }),
     );
   });
 
@@ -61,5 +78,46 @@ describe('SessionsService', () => {
         statDeltas: { logic: 10 },
       }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('lists only the requesting user non-deleted summaries', async () => {
+    const prisma = {
+      sessionSummary: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    const service = new SessionsService(prisma as any);
+
+    await service.listSummaries('user-1');
+
+    expect(prisma.sessionSummary.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'user-1', deletedAt: null },
+      }),
+    );
+  });
+
+  it('soft-deletes only the requesting user summary', async () => {
+    const prisma = {
+      sessionSummary: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+    };
+    const service = new SessionsService(prisma as any);
+
+    await service.deleteSummary(
+      'user-1',
+      '8e028ebc-8af9-4d0d-bb88-44dfd97b6ec8',
+    );
+
+    expect(prisma.sessionSummary.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: '8e028ebc-8af9-4d0d-bb88-44dfd97b6ec8',
+          userId: 'user-1',
+          deletedAt: null,
+        },
+      }),
+    );
   });
 });

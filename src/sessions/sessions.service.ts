@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   CountBucketDto,
   ResultStatusDto,
-  SessionSummaryUploadDto,
+  UploadSessionSummaryDto,
   TokenBucketDto,
   WorkTypeDto,
 } from './dto/session-summary.dto';
@@ -26,82 +26,102 @@ const COUNT_BONUS_CAP: Record<CountBucketDto, number> = {
   MASSIVE: 800,
 };
 
+const SESSION_SUMMARY_SELECT = {
+  id: true,
+  sessionId: true,
+  userId: true,
+  agentType: true,
+  workType: true,
+  startedAt: true,
+  endedAt: true,
+  durationBucket: true,
+  tokenBucket: true,
+  changedFileCountBucket: true,
+  addedLineBucket: true,
+  deletedLineBucket: true,
+  testRunCount: true,
+  buildRunCount: true,
+  resultStatus: true,
+  expGained: true,
+  statDeltas: true,
+  evolutionProgressDelta: true,
+  confidence: true,
+  sourceProvider: true,
+  parserVersion: true,
+  projectHash: true,
+  localOnlyProjectId: true,
+  createdAt: true,
+  updatedAt: true,
+  deletedAt: true,
+} satisfies Prisma.SessionSummarySelect;
+
 @Injectable()
 export class SessionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createSummary(userId: string, dto: SessionSummaryUploadDto) {
+  async createSummary(userId: string, dto: UploadSessionSummaryDto) {
     await this.validateSummary(userId, dto);
 
-    try {
-      const summary = await this.prisma.sessionSummary.create({
-        data: {
-          sessionId: dto.sessionId,
-          userId,
-          agentType: dto.agentType,
-          workType: dto.workType,
-          startedAt: new Date(dto.startedAt),
-          endedAt: dto.endedAt ? new Date(dto.endedAt) : undefined,
-          durationBucket: dto.durationBucket,
-          tokenBucket: dto.tokenBucket,
-          tokenRange: dto.tokenRange as Prisma.InputJsonValue | undefined,
-          changedFileCountBucket: dto.changedFileCountBucket,
-          addedLineBucket: dto.addedLineBucket,
-          deletedLineBucket: dto.deletedLineBucket,
-          testRunCount: dto.testRunCount,
-          buildRunCount: dto.buildRunCount,
-          resultStatus: dto.resultStatus,
-          expGained: dto.expGained,
-          statDeltas: dto.statDeltas as Prisma.InputJsonValue,
-          evolutionProgressDelta:
-            dto.evolutionProgressDelta as Prisma.InputJsonValue | undefined,
-          confidence: dto.confidence,
-          excludedFromCompetitive: dto.confidence === 'LOW',
-          sourceProvider: dto.sourceProvider,
-          parserVersion: dto.parserVersion,
-          projectHash: dto.projectHash,
-          localOnlyProjectId: dto.localOnlyProjectId,
-          projectAlias: dto.projectAlias,
-          workTypeDistribution: dto.workTypeDistribution
-            ? { create: { distribution: dto.workTypeDistribution } }
-            : undefined,
-        },
-      });
+    const safeData = {
+      agentType: dto.agentType,
+      workType: dto.workType,
+      startedAt: new Date(dto.startedAt),
+      endedAt: dto.endedAt ? new Date(dto.endedAt) : null,
+      durationBucket: dto.durationBucket,
+      tokenBucket: dto.tokenBucket,
+      changedFileCountBucket: dto.changedFileCountBucket,
+      addedLineBucket: dto.addedLineBucket,
+      deletedLineBucket: dto.deletedLineBucket,
+      testRunCount: dto.testRunCount,
+      buildRunCount: dto.buildRunCount,
+      resultStatus: dto.resultStatus,
+      expGained: dto.expGained,
+      statDeltas: dto.statDeltas as Prisma.InputJsonValue,
+      evolutionProgressDelta:
+        dto.evolutionProgressDelta as Prisma.InputJsonValue | undefined,
+      confidence: dto.confidence,
+      excludedFromCompetitive: dto.confidence === 'LOW',
+      sourceProvider: dto.sourceProvider,
+      parserVersion: dto.parserVersion,
+      projectHash: dto.projectHash,
+      localOnlyProjectId: dto.localOnlyProjectId,
+      deletedAt: null,
+    };
 
-      await this.prisma.syncState.upsert({
-        where: {
-          userId_entityType_entityId: {
-            userId,
-            entityType: 'SESSION_SUMMARY',
-            entityId: summary.id,
-          },
+    const summary = await this.prisma.sessionSummary.upsert({
+      where: {
+        userId_sessionId: {
+          userId,
+          sessionId: dto.sessionId,
         },
-        create: {
+      },
+      create: {
+        sessionId: dto.sessionId,
+        userId,
+        ...safeData,
+      },
+      update: safeData,
+      select: SESSION_SUMMARY_SELECT,
+    });
+
+    await this.prisma.syncState.upsert({
+      where: {
+        userId_entityType_entityId: {
           userId,
           entityType: 'SESSION_SUMMARY',
           entityId: summary.id,
-          syncVersion: 1,
         },
-        update: { deletedAt: null },
-      });
+      },
+      create: {
+        userId,
+        entityType: 'SESSION_SUMMARY',
+        entityId: summary.id,
+        syncVersion: 1,
+      },
+      update: { syncVersion: { increment: 1 }, deletedAt: null },
+    });
 
-      return summary;
-    } catch (error) {
-      if (
-        (error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === 'P2002') ||
-        (typeof error === 'object' &&
-          error !== null &&
-          'code' in error &&
-          error.code === 'P2002')
-      ) {
-        throw new BadRequestException({
-          errorCode: 'VALIDATION_FAILED',
-          message: ['sessionId already exists for this user'],
-        });
-      }
-      throw error;
-    }
+    return summary;
   }
 
   listSummaries(userId: string) {
@@ -109,6 +129,7 @@ export class SessionsService {
       where: { userId, deletedAt: null },
       orderBy: { startedAt: 'desc' },
       take: 200,
+      select: SESSION_SUMMARY_SELECT,
     });
   }
 
@@ -119,11 +140,11 @@ export class SessionsService {
     });
   }
 
-  private async validateSummary(userId: string, dto: SessionSummaryUploadDto) {
-    if (!dto.tokenBucket && !dto.tokenRange) {
+  private async validateSummary(userId: string, dto: UploadSessionSummaryDto) {
+    if (!dto.tokenBucket) {
       throw new BadRequestException({
         errorCode: 'VALIDATION_FAILED',
-        message: ['Either tokenBucket or tokenRange is required'],
+        message: ['tokenBucket is required'],
       });
     }
 
@@ -131,13 +152,6 @@ export class SessionsService {
       throw new BadRequestException({
         errorCode: 'VALIDATION_FAILED',
         message: ['Either projectHash or localOnlyProjectId is required'],
-      });
-    }
-
-    if (dto.tokenRange && dto.tokenRange.min > dto.tokenRange.max) {
-      throw new BadRequestException({
-        errorCode: 'VALIDATION_FAILED',
-        message: ['tokenRange min must not exceed max'],
       });
     }
 
@@ -156,6 +170,7 @@ export class SessionsService {
     const aggregate = await this.prisma.sessionSummary.aggregate({
       where: {
         userId,
+        NOT: { sessionId: dto.sessionId },
         createdAt: { gte: today },
         deletedAt: null,
       },
@@ -170,10 +185,8 @@ export class SessionsService {
     }
   }
 
-  private maxAllowedExp(dto: SessionSummaryUploadDto): number {
-    const tokenCap = dto.tokenBucket
-      ? TOKEN_EXP_CAP[dto.tokenBucket]
-      : Math.min(Math.ceil((dto.tokenRange?.max ?? 0) / 10), 3_000);
+  private maxAllowedExp(dto: UploadSessionSummaryDto): number {
+    const tokenCap = TOKEN_EXP_CAP[dto.tokenBucket];
     const fileCap = COUNT_BONUS_CAP[dto.changedFileCountBucket];
     const resultMultiplier =
       dto.resultStatus === ResultStatusDto.SUCCESS
@@ -184,7 +197,7 @@ export class SessionsService {
     return Math.floor((tokenCap + fileCap + 300) * resultMultiplier);
   }
 
-  private validateWorkTypeStatDeltas(dto: SessionSummaryUploadDto) {
+  private validateWorkTypeStatDeltas(dto: UploadSessionSummaryDto) {
     const totalAbs = Object.values(dto.statDeltas).reduce(
       (sum, value) => sum + Math.abs(value ?? 0),
       0,
