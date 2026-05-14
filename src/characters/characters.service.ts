@@ -14,6 +14,7 @@ const CHARACTER_SELECT = {
   appearance: true,
   unlockedItems: true,
   syncVersion: true,
+  serverRevision: true,
   createdAt: true,
   updatedAt: true,
   deletedAt: true,
@@ -46,6 +47,7 @@ export class CharactersService {
         appearance: dto.appearance as Prisma.InputJsonValue | undefined,
         unlockedItems: dto.unlockedItems as Prisma.InputJsonValue | undefined,
         syncVersion: dto.syncVersion,
+        serverRevision: 1,
         stats: { create: dto.stats },
       },
       update: {
@@ -57,6 +59,7 @@ export class CharactersService {
         appearance: dto.appearance as Prisma.InputJsonValue | undefined,
         unlockedItems: dto.unlockedItems as Prisma.InputJsonValue | undefined,
         syncVersion: dto.syncVersion,
+        serverRevision: { increment: 1 },
         deletedAt: null,
         stats: {
           upsert: {
@@ -81,8 +84,13 @@ export class CharactersService {
         entityType: 'CHARACTER',
         entityId: character.id,
         syncVersion: dto.syncVersion,
+        serverRevision: character.serverRevision,
       },
-      update: { syncVersion: dto.syncVersion, deletedAt: null },
+      update: {
+        syncVersion: dto.syncVersion,
+        serverRevision: character.serverRevision,
+        deletedAt: null,
+      },
     });
 
     return character;

@@ -152,6 +152,7 @@ model Character {
   appearance     Json?
   unlockedItems  Json?
   syncVersion    Int                   @default(1)
+  serverRevision Int                   @default(1)
   updatedAt      DateTime              @updatedAt
   createdAt      DateTime              @default(now())
   deletedAt      DateTime?
@@ -159,6 +160,8 @@ model Character {
   user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   stats          CharacterStats?
   evolutions     CharacterEvolution[]
+
+  @@index([serverRevision])
 }
 
 model CharacterStats {
@@ -216,6 +219,7 @@ model SessionSummary {
   parserVersion            String?
   projectHash              String?
   localOnlyProjectId       String?
+  serverRevision           Int                     @default(1)
   createdAt                DateTime                @default(now())
   updatedAt                DateTime                @updatedAt
   deletedAt                DateTime?
@@ -224,8 +228,10 @@ model SessionSummary {
 
   @@unique([userId, sessionId])
   @@index([userId, startedAt])
+  @@index([userId, serverRevision])
   @@index([projectHash])
   @@index([localOnlyProjectId])
+  @@index([sourceProvider])
 }
 
 model Achievement {
@@ -248,12 +254,14 @@ model UserAchievement {
   unlockedAt     DateTime     @default(now())
   progress       Json?
   source         String?
+  serverRevision Int          @default(1)
 
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   achievement    Achievement  @relation(fields: [achievementId], references: [id], onDelete: Cascade)
 
   @@unique([userId, achievementId])
   @@index([userId])
+  @@index([userId, serverRevision])
 }
 
 model SyncState {
@@ -262,6 +270,7 @@ model SyncState {
   entityType      SyncEntityType
   entityId        String
   syncVersion     Int            @default(1)
+  serverRevision  Int            @default(1)
   idempotencyKey  String?
   updatedAt       DateTime       @updatedAt
   createdAt       DateTime       @default(now())
@@ -271,6 +280,7 @@ model SyncState {
 
   @@unique([userId, entityType, entityId])
   @@unique([userId, idempotencyKey])
+  @@index([userId, serverRevision])
 }
 
 model Device {

@@ -65,6 +65,15 @@ export enum ConfidenceBandDto {
   HIGH = 'HIGH',
 }
 
+export enum SourceProviderDto {
+  UNITY_CLIENT = 'UNITY_CLIENT',
+  CODEX = 'CODEX',
+  CLAUDE = 'CLAUDE',
+  GIT = 'GIT',
+  MANUAL = 'MANUAL',
+  UNKNOWN = 'UNKNOWN',
+}
+
 export class StatDeltasDto {
   @IsOptional()
   @IsInt()
@@ -214,10 +223,8 @@ export class UploadSessionSummaryDto {
   confidence: ConfidenceBandDto;
 
   @IsOptional()
-  @IsString()
-  @Length(1, 40)
-  @Matches(/^[A-Za-z0-9:._-]+$/)
-  sourceProvider?: string;
+  @IsEnum(SourceProviderDto)
+  sourceProvider?: SourceProviderDto;
 
   @IsOptional()
   @IsString()

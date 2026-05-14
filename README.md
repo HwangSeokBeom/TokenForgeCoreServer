@@ -9,7 +9,7 @@ TokenForge Core Server is the privacy-first NestJS backend for TokenForge, a Uni
 - Character snapshot storage and sync.
 - Session summary storage.
 - Privacy Guard second-pass validation.
-- Cloud sync skeleton.
+- Phase 2 privacy-safe cloud sync foundation.
 - Achievement storage foundation.
 - Data export/delete.
 - Health check.
@@ -22,13 +22,113 @@ The Unity client is responsible for local analysis and first-pass sanitization. 
 
 ## Privacy-First Rules
 
-Never send these fields to the server: `prompt`, `rawPrompt`, `code`, `rawCode`, `sourceCode`, `log`, `rawLog`, `terminalOutput`, `stdout`, `stderr`, `absolutePath`, `filePath`, `pathRaw`, `remoteUrl`, `gitRemote`, `branchName`, `rawBranchName`, `commitMessage`, `rawCommitMessage`, `diff`, `patch`, `command`, `commandText`, `apiKey`, `secret`, `passwordRaw`, `tokenRaw`, `rawToken`, `apiToken`, `accessToken`, `secretToken`.
+Never send these fields to the server: `prompt`, `rawPrompt`, `rawDiff`, `code`, `rawCode`, `sourceCode`, `log`, `rawLog`, `claudeLog`, `codexLog`, `terminalOutput`, `stdout`, `stderr`, `absolutePath`, `filePath`, `path`, `pathRaw`, `remoteUrl`, `gitRemote`, `branchName`, `rawBranchName`, `commitMessage`, `rawCommitMessage`, `diff`, `patch`, `command`, `commandText`, `authorization`, `apiKey`, `secret`, `passwordRaw`, `tokenRaw`, `rawToken`, `apiToken`, `accessToken`, `secretToken`.
 
 `refreshToken` is accepted only by auth endpoints. `tokenBucket` is the only token aggregate accepted by session summary sync.
 
 ## Session Summary Idempotency
 
 `POST /sessions/summary` is idempotent per `userId + sessionId`. Re-uploading the same `sessionId` for the same user updates the existing safe aggregate row, clears a prior soft-delete for that row, and increments its sync state. Raw prompts, code, logs, paths, remotes, branches, commits, diffs, patches, command text, stdout, and stderr are never accepted or returned.
+
+## Phase 2 Safe Sync API
+
+All routes are versioned under `/api/v1` and require `Authorization: Bearer <accessToken>`.
+
+### `POST /api/v1/sync/push`
+
+Accepts only explicit privacy-safe fields. Unknown DTO fields are rejected, and the Privacy Guard rejects forbidden key names recursively before persistence.
+
+Safe example:
+
+```json
+{
+  "idempotencyKey": "sync-safe-0001",
+  "clientRevision": 1,
+  "sessionSummaries": [
+    {
+      "sessionId": "session_opaque_001",
+      "agentType": "codex",
+      "workType": "FEATURE",
+      "startedAt": "2026-05-14T00:00:00.000Z",
+      "durationBucket": "M_15_30",
+      "tokenBucket": "SMALL",
+      "changedFileCountBucket": "FEW",
+      "addedLineBucket": "FEW",
+      "deletedLineBucket": "ONE",
+      "testRunCount": 1,
+      "buildRunCount": 0,
+      "resultStatus": "SUCCESS",
+      "expGained": 300,
+      "statDeltas": { "logic": 10 },
+      "confidence": "HIGH",
+      "sourceProvider": "CODEX",
+      "projectHash": "0123456789abcdef"
+    }
+  ],
+  "achievements": [
+    {
+      "achievementId": "FIRST_SAFE_SYNC",
+      "sourceProvider": "UNITY_CLIENT",
+      "progress": { "currentValue": 1, "targetValue": 1, "completed": true }
+    }
+  ]
+}
+```
+
+Response shape:
+
+```json
+{
+  "status": "ok",
+  "policy": "additive-upsert",
+  "serverRevision": 3,
+  "accepted": {
+    "character": 0,
+    "sessionSummaries": 1,
+    "achievements": 1,
+    "profile": 0,
+    "settings": 0
+  },
+  "serverTime": "2026-05-14T00:00:00.000Z"
+}
+```
+
+### `GET /api/v1/sync/pull`
+
+Returns the authenticated user's additive/upsert-safe state:
+
+```json
+{
+  "policy": "additive-upsert",
+  "serverRevision": 3,
+  "profile": { "settings": { "cloudSyncOptIn": true }, "updatedAt": "2026-05-14T00:00:00.000Z" },
+  "character": null,
+  "sessionSummaries": [],
+  "achievements": [
+    {
+      "achievementId": "FIRST_SAFE_SYNC",
+      "title": "FIRST_SAFE_SYNC",
+      "description": "Client-synced privacy-safe achievement.",
+      "unlockedAt": "2026-05-14T00:00:00.000Z",
+      "progress": null,
+      "sourceProvider": "UNITY_CLIENT",
+      "serverRevision": 3
+    }
+  ]
+}
+```
+
+The pull response intentionally omits Prisma internal IDs, `userId`, soft-delete markers, raw sync state rows, and delete/tombstone instructions.
+
+`POST /api/v1/sync/full` is not implemented yet. The current Unity Phase 2 merge behavior is additive/upsert-only, and no tombstone contract exists, so push and pull stay separate to avoid implying unsupported conflict or delete behavior.
+
+## Safe Sync Limitations
+
+- Production login hardening may still be pending for deployment environments; the current auth foundation supports guest/email JWT flows.
+- No delete/tombstone sync contract yet.
+- No Claude/Codex raw log parsing on the server.
+- No raw Git execution or raw AI log ingestion on the server.
+- The server accepts only privacy-safe aggregate client payloads and safe opaque IDs.
 
 ## Environment
 
@@ -74,27 +174,27 @@ npm test
 
 ## API List
 
-- `GET /health`
-- `POST /auth/guest`
-- `POST /auth/signup`
-- `POST /auth/login`
-- `POST /auth/refresh`
-- `POST /auth/logout`
-- `DELETE /auth/account`
-- `GET /users/me`
-- `PATCH /users/me`
-- `GET /characters/me`
-- `PUT /characters/me/snapshot`
-- `GET /characters/me/history`
-- `POST /sessions/summary`
-- `GET /sessions/summary`
-- `DELETE /sessions/summary/:id`
-- `POST /sync/pull`
-- `POST /sync/push`
-- `GET /achievements`
-- `GET /achievements/me`
-- `GET /privacy/export`
-- `DELETE /privacy/data`
+- `GET /api/v1/health`
+- `POST /api/v1/auth/guest`
+- `POST /api/v1/auth/signup`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
+- `DELETE /api/v1/auth/account`
+- `GET /api/v1/users/me`
+- `PATCH /api/v1/users/me`
+- `GET /api/v1/characters/me`
+- `PUT /api/v1/characters/me/snapshot`
+- `GET /api/v1/characters/me/history`
+- `POST /api/v1/sessions/summary`
+- `GET /api/v1/sessions/summary`
+- `DELETE /api/v1/sessions/summary/:id`
+- `GET /api/v1/sync/pull`
+- `POST /api/v1/sync/push`
+- `GET /api/v1/achievements`
+- `GET /api/v1/achievements/me`
+- `GET /api/v1/privacy/export`
+- `DELETE /api/v1/privacy/data`
 
 ## Phase 1 Notes
 
@@ -106,5 +206,6 @@ Implemented endpoints are MVP-grade. `PATCH /characters/me/stats`, `POST /achiev
 - Add database-backed e2e tests with disposable PostgreSQL.
 - Add OpenAPI documentation.
 - Define exact token bucket and EXP balance tables.
-- Expand sync conflict handling beyond last-write-wins.
+- Expand sync conflict handling beyond additive/upsert.
+- Define a delete/tombstone contract before adding remote deletion sync.
 - Add privacy consent flows for optional project aliases.

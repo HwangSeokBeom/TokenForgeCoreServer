@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import {
   CurrentUser,
   RequestUser,
@@ -8,13 +8,13 @@ import { SyncPullRequestDto, SyncPushRequestDto } from './dto/sync.dto';
 import { SyncService } from './sync.service';
 
 @UseGuards(JwtAuthGuard)
-@Controller('sync')
+@Controller({ path: 'sync', version: '1' })
 export class SyncController {
   constructor(private readonly sync: SyncService) {}
 
-  @Post('pull')
-  pull(@CurrentUser() user: RequestUser, @Body() _dto: SyncPullRequestDto) {
-    return this.sync.pull(user.sub);
+  @Get('pull')
+  pull(@CurrentUser() user: RequestUser, @Query() dto: SyncPullRequestDto) {
+    return this.sync.pull(user.sub, dto);
   }
 
   @Post('push')

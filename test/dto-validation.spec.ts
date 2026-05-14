@@ -146,4 +146,32 @@ describe('DTO validation', () => {
       true,
     );
   });
+
+  it('accepts safe achievement sync uploads', async () => {
+    const errors = await validateDto(SyncPushDto, {
+      achievements: [
+        {
+          achievementId: 'FIRST_SAFE_SYNC',
+          unlockedAt: new Date().toISOString(),
+          sourceProvider: 'UNITY_CLIENT',
+          progress: { currentValue: 1, targetValue: 1, completed: true },
+        },
+      ],
+    });
+
+    expect(errors).toHaveLength(0);
+  });
+
+  it('rejects unknown fields inside achievement progress', async () => {
+    const errors = await validateDto(SyncPushDto, {
+      achievements: [
+        {
+          achievementId: 'FIRST_SAFE_SYNC',
+          progress: { currentValue: 1, rawNote: 'not allowed' },
+        },
+      ],
+    });
+
+    expect(JSON.stringify(errors)).toContain('rawNote');
+  });
 });

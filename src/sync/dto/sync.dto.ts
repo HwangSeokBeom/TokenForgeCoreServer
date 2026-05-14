@@ -4,7 +4,8 @@ import {
   IsBoolean,
   IsInt,
   IsArray,
-  IsObject,
+  IsDateString,
+  IsEnum,
   IsOptional,
   IsString,
   Length,
@@ -14,7 +15,89 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { CharacterSnapshotDto } from '../../characters/dto/character-snapshot.dto';
-import { SessionSummaryUploadDto } from '../../sessions/dto/session-summary.dto';
+import {
+  CountBucketDto,
+  SessionSummaryUploadDto,
+  SourceProviderDto,
+} from '../../sessions/dto/session-summary.dto';
+
+export class UserProgressionSyncDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(999)
+  level?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10_000_000)
+  exp?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000)
+  totalSafeSessionCount?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100_000)
+  totalAchievementCount?: number;
+
+  @IsOptional()
+  @IsDateString()
+  lastPlayedAt?: string;
+}
+
+export class AchievementProgressSyncDto {
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000)
+  currentValue?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000)
+  targetValue?: number;
+
+  @IsOptional()
+  @IsEnum(CountBucketDto)
+  countBucket?: CountBucketDto;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 40)
+  @Matches(/^[A-Za-z0-9:_-]+$/)
+  tier?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  completed?: boolean;
+}
+
+export class AchievementSyncDto {
+  @IsString()
+  @Length(1, 128)
+  @Matches(/^[A-Za-z0-9:_-]+$/)
+  achievementId: string;
+
+  @IsOptional()
+  @IsDateString()
+  unlockedAt?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AchievementProgressSyncDto)
+  progress?: AchievementProgressSyncDto;
+
+  @IsOptional()
+  @IsEnum(SourceProviderDto)
+  sourceProvider?: SourceProviderDto;
+}
 
 export class SettingsSyncRequestDto {
   @IsOptional()
@@ -48,10 +131,17 @@ export class SyncPullDto {
   @IsInt()
   @Min(1)
   @Max(2_147_483_647)
-  sinceSyncVersion?: number;
+  @Type(() => Number)
+  sinceServerRevision?: number;
 }
 
 export class SyncPushDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_647)
+  clientRevision?: number;
+
   @IsOptional()
   @IsString()
   @Length(8, 128)
@@ -60,8 +150,18 @@ export class SyncPushDto {
 
   @IsOptional()
   @ValidateNested()
+  @Type(() => UserProgressionSyncDto)
+  userProgression?: UserProgressionSyncDto;
+
+  @IsOptional()
+  @ValidateNested()
   @Type(() => CharacterSnapshotDto)
   characterSnapshot?: CharacterSnapshotDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CharacterSnapshotDto)
+  character?: CharacterSnapshotDto;
 
   @IsOptional()
   @IsArray()
@@ -71,13 +171,23 @@ export class SyncPushDto {
   sessionSummaries?: SessionSummaryUploadDto[];
 
   @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => SessionSummaryUploadDto)
+  sessions?: SessionSummaryUploadDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => AchievementSyncDto)
+  achievements?: AchievementSyncDto[];
+
+  @IsOptional()
   @ValidateNested()
   @Type(() => SettingsSyncRequestDto)
   settings?: SettingsSyncRequestDto;
-
-  @IsOptional()
-  @IsObject()
-  tombstones?: Record<string, string[]>;
 }
 
 export {

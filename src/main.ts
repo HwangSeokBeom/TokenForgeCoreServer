@@ -1,4 +1,8 @@
-import { BadRequestException, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  BadRequestException,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -9,7 +13,8 @@ async function bootstrap() {
     bodyParser: true,
   });
 
-  app.enableVersioning({ type: VersioningType.URI });
+  app.setGlobalPrefix('api');
+  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
   app.use(helmet());
   app.enableCors({
     origin: process.env.CORS_ORIGIN?.split(',') ?? false,

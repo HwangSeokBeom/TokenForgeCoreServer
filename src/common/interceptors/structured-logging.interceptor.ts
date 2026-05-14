@@ -1,6 +1,7 @@
 import {
   CallHandler,
   ExecutionContext,
+  HttpException,
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
@@ -19,7 +20,8 @@ export class StructuredLoggingInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap({
         next: () => this.log(request, response, requestId, startedAt),
-        error: () => this.log(request, response, requestId, startedAt),
+        error: (error) =>
+          this.log(request, response, requestId, startedAt, error),
       }),
     );
   }
@@ -29,14 +31,17 @@ export class StructuredLoggingInterceptor implements NestInterceptor {
     response: Response,
     requestId: unknown,
     startedAt: number,
+    error?: unknown,
   ) {
+    const exceptionStatus =
+      error instanceof HttpException ? error.getStatus() : undefined;
     console.log(
       JSON.stringify({
         level: 'info',
         requestId,
         method: request.method,
         path: request.originalUrl ?? request.url,
-        statusCode: response.statusCode,
+        statusCode: exceptionStatus ?? response.statusCode,
         durationMs: Date.now() - startedAt,
         ip: request.ip,
       }),

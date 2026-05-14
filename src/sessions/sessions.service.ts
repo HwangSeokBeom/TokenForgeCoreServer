@@ -50,6 +50,7 @@ const SESSION_SUMMARY_SELECT = {
   parserVersion: true,
   projectHash: true,
   localOnlyProjectId: true,
+  serverRevision: true,
   createdAt: true,
   updatedAt: true,
   deletedAt: true,
@@ -99,8 +100,12 @@ export class SessionsService {
         sessionId: dto.sessionId,
         userId,
         ...safeData,
+        serverRevision: 1,
       },
-      update: safeData,
+      update: {
+        ...safeData,
+        serverRevision: { increment: 1 },
+      },
       select: SESSION_SUMMARY_SELECT,
     });
 
@@ -117,8 +122,13 @@ export class SessionsService {
         entityType: 'SESSION_SUMMARY',
         entityId: summary.id,
         syncVersion: 1,
+        serverRevision: summary.serverRevision,
       },
-      update: { syncVersion: { increment: 1 }, deletedAt: null },
+      update: {
+        syncVersion: { increment: 1 },
+        serverRevision: summary.serverRevision,
+        deletedAt: null,
+      },
     });
 
     return summary;

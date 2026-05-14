@@ -64,6 +64,18 @@ describe('PrivacyGuardService', () => {
     ).toThrow(ForbiddenPayloadException);
   });
 
+  it('rejects explicitly forbidden path and log key variants', () => {
+    expect(() =>
+      service.assertSafePayload({ nested: { path: 'sanitized-looking-value' } }),
+    ).toThrow(ForbiddenPayloadException);
+    expect(() =>
+      service.assertSafePayload({ nested: { claudeLog: 'blocked' } }),
+    ).toThrow(ForbiddenPayloadException);
+    expect(() =>
+      service.assertSafePayload({ nested: { codexLog: 'blocked' } }),
+    ).toThrow(ForbiddenPayloadException);
+  });
+
   it('rejects Git remote URLs in values', () => {
     expect(() =>
       service.assertSafePayload({
