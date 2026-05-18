@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "clientSyncId": "unity-sync-v1-mixed-001",
+  "sessions": [
+    {
+      "clientSessionId": "unity-mixed-git-001",
+      "sourceProvider": "GIT",
+      "dayBucket": "2026-05-14",
+      "timeBucket": "HOUR_14",
+      "confidence": "HIGH",
+      "analyzerVersion": "unity-git-analyzer.1",
+      "parserVersion": "safe-sync.1",
+      "hashedRepositoryId": "abcdef0123456789",
+      "changeCountBucket": "FEW",
+      "lineCountBucket": "MANY",
+      "commitCountBucket": "ONE",
+      "warningIds": ["LOW_CONFIDENCE_RANGE"],
+      "categoryBuckets": [
+        { "key": "WORK_FEATURE", "countBucket": "FEW" }
+      ],
+      "languageBuckets": [
+        { "key": "LANG_CSHARP", "countBucket": "MANY" }
+      ],
+      "toolBuckets": [
+        { "key": "TOOL_GIT_COMMIT", "countBucket": "ONE" }
+      ]
+    },
+    {
+      "clientSessionId": "unity-mixed-invalid-bucket-001",
+      "sourceProvider": "CODEX",
+      "dayBucket": "2026-05-14",
+      "timeBucket": "HOUR_15",
+      "confidence": "HIGH",
+      "analyzerVersion": "unity-agent-analyzer.1",
+      "parserVersion": "codex-parser.1",
+      "sessionCountBucket": "EVERYTHING",
+      "interactionCountBucket": "MANY",
+      "warningIds": ["SAFE_AGGREGATE_ONLY"],
+      "categoryBuckets": [
+        { "key": "WORK_FEATURE", "countBucket": "FEW" }
+      ],
+      "languageBuckets": [
+        { "key": "LANG_TYPESCRIPT", "countBucket": "MANY" }
+      ],
+      "toolBuckets": [
+        { "key": "TOOL_TEST", "countBucket": "FEW" }
+      ]
+    },
+    {
+      "clientSessionId": "unity-mixed-manual-001",
+      "sourceProvider": "MANUAL",
+      "dayBucket": "2026-05-14",
+      "timeBucket": "HOUR_16",
+      "confidence": "MEDIUM",
+      "analyzerVersion": "unity-manual.1",
+      "activityCategory": "WORK_DOCS",
+      "durationBucket": "M_15_30",
+      "warningIds": ["USER_ENTERED_SUMMARY"],
+      "categoryBuckets": [
+        { "key": "WORK_DOCS", "countBucket": "ONE" }
+      ],
+      "languageBuckets": [
+        { "key": "LANG_NONE", "countBucket": "NONE" }
+      ],
+      "toolBuckets": [
+        { "key": "TOOL_MANUAL", "countBucket": "ONE" }
+      ]
+    }
+  ]
+}

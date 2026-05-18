@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+  push:
+    branches:
+      - main
+      - dev
+
+permissions:
+  contents: read
+
+jobs:
+  fast-validation:
+    name: Fast validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run fast validation
+        run: npm run ci:fast
+
+  db-e2e:
+    name: Disposable PostgreSQL e2e
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://tokenforge:tokenforge@localhost:55432/tokenforge_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run DB e2e
+        run: npm run ci:db
+
+  openapi-contract:
+    name: OpenAPI and client contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate OpenAPI and client contract
+        run: npm run ci:openapi
+
+      - name: Upload OpenAPI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: safe-sync-openapi
+          path: artifacts/openapi/safe-sync.openapi.yaml
+          if-no-files-found: error
+
+      - name: Upload client contract artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-safe-sync-contract
+          path: artifacts/client-contract/unity-safe-sync-contract-v1.bundle.json
+          if-no-files-found: error

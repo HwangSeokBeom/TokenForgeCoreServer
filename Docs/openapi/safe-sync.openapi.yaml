@@ -1,0 +1,497 @@
+openapi: 3.1.0
+info:
+  title: TokenForge Safe Sync API
+  version: 1.0.0
+  summary: Privacy-safe aggregate activity-session sync API.
+  description: >
+    Safe Sync accepts only Unity SafeSyncMapper aggregate activity sessions.
+    Raw local development data, approved-location settings, prompts, responses,
+    commands, logs, paths, filenames, repository names, branch names, source
+    snippets, usernames, tokens, secrets, and raw Git output are never accepted.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /sync/activity-sessions:
+    post:
+      operationId: upsertSafeActivitySessions
+      summary: Upsert aggregate safe activity sessions.
+      description: >
+        Upserts by authenticated user id plus clientSessionId. Unknown DTO fields
+        and unsupported schema versions are rejected. With the current Nest DTO
+        validation pipeline, malformed enum or bucket values reject the whole
+        request before partial persistence. Sessions that reach the service-level
+        safe validator can be reported per clientSessionId.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SafeActivitySessionsUpsertRequest'
+            examples:
+              unitySafeSyncMapperV1:
+                summary: Valid Unity SafeSyncMapper v1 aggregate payload
+                value:
+                  schemaVersion: 1
+                  clientSyncId: unity-sync-v1-001
+                  sessions:
+                    - clientSessionId: unity-git-20260514-001
+                      sourceProvider: GIT
+                      dayBucket: '2026-05-14'
+                      timeBucket: HOUR_09
+                      confidence: HIGH
+                      analyzerVersion: unity-git-analyzer.1
+                      parserVersion: safe-sync.1
+                      hashedRepositoryId: '0123456789abcdef'
+                      changeCountBucket: FEW
+                      lineCountBucket: MANY
+                      commitCountBucket: ONE
+                      warningIds:
+                        - LOW_CONFIDENCE_RANGE
+                      categoryBuckets:
+                        - key: WORK_FEATURE
+                          countBucket: FEW
+                      languageBuckets:
+                        - key: LANG_CSHARP
+                          countBucket: MANY
+                      toolBuckets:
+                        - key: TOOL_GIT_COMMIT
+                          countBucket: ONE
+                    - clientSessionId: unity-codex-20260514-001
+                      sourceProvider: CODEX
+                      dayBucket: '2026-05-14'
+                      timeBucket: HOUR_11
+                      confidence: HIGH
+                      analyzerVersion: unity-agent-analyzer.1
+                      parserVersion: codex-parser.1
+                      sessionCountBucket: ONE
+                      interactionCountBucket: MANY
+                      warningIds:
+                        - SAFE_AGGREGATE_ONLY
+                      categoryBuckets:
+                        - key: WORK_TEST
+                          countBucket: FEW
+                      languageBuckets:
+                        - key: LANG_TYPESCRIPT
+                          countBucket: MANY
+                      toolBuckets:
+                        - key: TOOL_TEST
+                          countBucket: FEW
+      responses:
+        '201':
+          description: Aggregate sessions accepted or safely rejected per result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeActivitySessionsUpsertResponse'
+              example:
+                success: true
+                acceptedCount: 2
+                rejectedCount: 0
+                results:
+                  - clientSessionId: unity-git-20260514-001
+                    status: accepted
+                    serverSessionId: 11111111-1111-4111-8111-111111111111
+                  - clientSessionId: unity-codex-20260514-001
+                    status: accepted
+                    serverSessionId: 11111111-1111-4111-8111-111111111112
+                serverTime: '2026-05-14T00:00:00.000Z'
+                schemaVersion: 1
+        '400':
+          description: Validation or privacy guard rejection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeError'
+              example:
+                errorCode: UNSAFE_FIELD_NAME
+                message: Safe Sync payload failed privacy-safe validation.
+    get:
+      operationId: listSafeActivitySessions
+      summary: List owned aggregate safe activity sessions.
+      parameters:
+        - in: query
+          name: sourceProvider
+          schema:
+            $ref: '#/components/schemas/ActivitySourceProvider'
+        - in: query
+          name: dayBucket
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 10000
+            default: 0
+      responses:
+        '200':
+          description: Owned safe aggregate sessions only.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeActivitySessionsListResponse'
+  /sync/activity-sessions/{id}:
+    delete:
+      operationId: deleteSafeActivitySession
+      summary: Delete one owned safe activity session.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Deleted owned session.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, deletedId, serverTime]
+                properties:
+                  success:
+                    type: boolean
+                  deletedId:
+                    type: string
+                    format: uuid
+                  serverTime:
+                    type: string
+                    format: date-time
+        '404':
+          description: Session was not found for the current identity.
+  /sync/health:
+    get:
+      operationId: getSafeSyncHealth
+      summary: Return Safe Sync health, schema version, and limits.
+      security: []
+      responses:
+        '200':
+          description: Safe Sync health without environment details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, schemaVersion, maxLimits, serverTime]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  schemaVersion:
+                    type: integer
+                    enum: [1]
+                  maxLimits:
+                    type: object
+                    required: [sessionsPerRequest, bucketsPerGroup, warningsPerSession]
+                    properties:
+                      sessionsPerRequest:
+                        type: integer
+                        enum: [100]
+                      bucketsPerGroup:
+                        type: integer
+                        enum: [50]
+                      warningsPerSession:
+                        type: integer
+                        enum: [25]
+                  serverTime:
+                    type: string
+                    format: date-time
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ActivitySourceProvider:
+      type: string
+      enum: [MANUAL, GIT, CLAUDE, CODEX, UNKNOWN_AGENT]
+    Confidence:
+      type: string
+      enum: [LOW, MEDIUM, HIGH]
+    CountBucket:
+      type: string
+      enum: [NONE, ONE, FEW, MANY, MASSIVE]
+    DurationBucket:
+      type: string
+      enum: [UNDER_5M, M_5_15, M_15_30, M_30_60, H_1_2, H_2_PLUS]
+    SafeBucket:
+      type: object
+      additionalProperties: false
+      required: [key, countBucket]
+      properties:
+        key:
+          type: string
+          pattern: '^[A-Z][A-Z0-9_:-]{0,63}$'
+          description: Safe enum-like aggregate bucket key.
+        countBucket:
+          $ref: '#/components/schemas/CountBucket'
+    SafeActivitySession:
+      type: object
+      additionalProperties: false
+      required: [clientSessionId, sourceProvider, dayBucket, confidence]
+      properties:
+        clientSessionId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9:_-]+$'
+        sourceProvider:
+          $ref: '#/components/schemas/ActivitySourceProvider'
+        dayBucket:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        timeBucket:
+          type: string
+          maxLength: 128
+          pattern: '^[A-Za-z0-9:_-]+$'
+        confidence:
+          $ref: '#/components/schemas/Confidence'
+        warningIds:
+          type: array
+          maxItems: 25
+          items:
+            type: string
+            pattern: '^[A-Z][A-Z0-9_:-]{0,63}$'
+        analyzerVersion:
+          type: string
+          maxLength: 40
+          pattern: '^[A-Za-z0-9:._-]+$'
+        parserVersion:
+          type: string
+          maxLength: 40
+          pattern: '^[A-Za-z0-9:._-]+$'
+        hashedRepositoryId:
+          type: string
+          pattern: '^(hash:)?[A-Fa-f0-9]{16,128}$'
+        changeCountBucket:
+          $ref: '#/components/schemas/CountBucket'
+        lineCountBucket:
+          $ref: '#/components/schemas/CountBucket'
+        commitCountBucket:
+          $ref: '#/components/schemas/CountBucket'
+        sessionCountBucket:
+          $ref: '#/components/schemas/CountBucket'
+        interactionCountBucket:
+          $ref: '#/components/schemas/CountBucket'
+        activityCategory:
+          type: string
+          pattern: '^[A-Z][A-Z0-9_:-]{0,63}$'
+        durationBucket:
+          $ref: '#/components/schemas/DurationBucket'
+        categoryBuckets:
+          type: array
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/SafeBucket'
+        languageBuckets:
+          type: array
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/SafeBucket'
+        toolBuckets:
+          type: array
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/SafeBucket'
+    SafeActivitySessionsUpsertRequest:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, sessions]
+      properties:
+        schemaVersion:
+          type: integer
+          enum: [1]
+        clientSyncId:
+          type: string
+          maxLength: 128
+          pattern: '^[A-Za-z0-9:_-]+$'
+        requestId:
+          type: string
+          maxLength: 128
+          pattern: '^[A-Za-z0-9:_-]+$'
+        sessions:
+          type: array
+          minItems: 0
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/SafeActivitySession'
+    SafeActivitySessionsUpsertResponse:
+      type: object
+      required: [success, acceptedCount, rejectedCount, results, serverTime, schemaVersion]
+      properties:
+        success:
+          type: boolean
+        acceptedCount:
+          type: integer
+        rejectedCount:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            required: [clientSessionId, status]
+            properties:
+              clientSessionId:
+                type: string
+                nullable: true
+              status:
+                type: string
+                enum: [accepted, rejected]
+              errorCode:
+                $ref: '#/components/schemas/SafeSyncErrorCode'
+              serverSessionId:
+                type: string
+                format: uuid
+        serverTime:
+          type: string
+          format: date-time
+        schemaVersion:
+          type: integer
+          enum: [1]
+    SafeActivitySessionsListResponse:
+      type: object
+      required: [sessions, pagination, serverTime, schemaVersion]
+      properties:
+        sessions:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/SafeActivitySession'
+              - type: object
+                required: [id, createdAt, updatedAt, aggregateSchemaVersion]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  aggregateSchemaVersion:
+                    type: integer
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        pagination:
+          type: object
+          required: [limit, offset, count]
+          properties:
+            limit:
+              type: integer
+            offset:
+              type: integer
+            count:
+              type: integer
+        serverTime:
+          type: string
+          format: date-time
+        schemaVersion:
+          type: integer
+          enum: [1]
+    SafeSyncErrorCode:
+      type: string
+      enum:
+        - UNSAFE_FIELD_NAME
+        - UNSAFE_PATH_VALUE
+        - UNSAFE_COMMAND_VALUE
+        - UNSAFE_TOKEN_VALUE
+        - UNSAFE_SOURCE_SNIPPET
+        - PAYLOAD_TOO_LARGE
+        - UNKNOWN_SCHEMA_VERSION
+        - INVALID_BUCKET_VALUE
+        - INVALID_ENUM_VALUE
+        - VALIDATION_FAILED
+    SafeError:
+      type: object
+      properties:
+        errorCode:
+          oneOf:
+            - $ref: '#/components/schemas/SafeSyncErrorCode'
+            - type: string
+              enum: [PRIVACY_GUARD_REJECTED]
+        message:
+          type: string
+x-tokenforge-privacy-boundary:
+  approvedLocations: Client-only tokenforge-approved-locations.local.json values are never synced.
+  forbiddenFields:
+    - accessToken
+    - absolutePath
+    - apiKey
+    - apiToken
+    - approvedLocation
+    - approvedLocationPath
+    - approvedLocationSettings
+    - approvedLocations
+    - authorization
+    - Bearer
+    - branchName
+    - branchNameRaw
+    - claudeLog
+    - code
+    - codexLog
+    - command
+    - commandText
+    - commitMessage
+    - commitMessageRaw
+    - diff
+    - fileName
+    - filename
+    - filePath
+    - gitRemote
+    - gitRemoteUrl
+    - localApprovedLocations
+    - localOnlyPath
+    - localPath
+    - log
+    - password
+    - passwordRaw
+    - patch
+    - path
+    - pathRaw
+    - prompt
+    - rawBranchName
+    - rawCode
+    - rawCommitMessage
+    - rawDiff
+    - rawLog
+    - rawPrompt
+    - rawResponse
+    - rawToken
+    - refreshToken
+    - remoteUrl
+    - repoName
+    - repositoryName
+    - response
+    - secret
+    - secretToken
+    - snippet
+    - source
+    - sourceCode
+    - sourceText
+    - stderr
+    - stdout
+    - terminalOutput
+    - token
+    - tokenRaw
+    - username

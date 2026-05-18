@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "clientSyncId": "unity-sync-v1-001",
+  "sessions": [
+    {
+      "clientSessionId": "unity-git-20260514-001",
+      "sourceProvider": "GIT",
+      "dayBucket": "2026-05-14",
+      "timeBucket": "HOUR_09",
+      "confidence": "HIGH",
+      "analyzerVersion": "unity-git-analyzer.1",
+      "parserVersion": "safe-sync.1",
+      "hashedRepositoryId": "0123456789abcdef",
+      "changeCountBucket": "FEW",
+      "lineCountBucket": "MANY",
+      "commitCountBucket": "ONE",
+      "warningIds": ["LOW_CONFIDENCE_RANGE"],
+      "categoryBuckets": [
+        { "key": "WORK_FEATURE", "countBucket": "FEW" },
+        { "key": "WORK_TEST", "countBucket": "ONE" }
+      ],
+      "languageBuckets": [
+        { "key": "LANG_CSHARP", "countBucket": "MANY" },
+        { "key": "LANG_SHADER", "countBucket": "ONE" }
+      ],
+      "toolBuckets": [
+        { "key": "TOOL_GIT_COMMIT", "countBucket": "ONE" }
+      ]
+    },
+    {
+      "clientSessionId": "unity-claude-20260514-001",
+      "sourceProvider": "CLAUDE",
+      "dayBucket": "2026-05-14",
+      "timeBucket": "HOUR_10",
+      "confidence": "MEDIUM",
+      "analyzerVersion": "unity-agent-analyzer.1",
+      "parserVersion": "claude-parser.1",
+      "sessionCountBucket": "ONE",
+      "interactionCountBucket": "MANY",
+      "warningIds": ["PROVIDER_LOG_PARTIAL"],
+      "categoryBuckets": [
+        { "key": "WORK_REFACTOR", "countBucket": "FEW" }
+      ],
+      "languageBuckets": [
+        { "key": "LANG_CSHARP", "countBucket": "FEW" }
+      ],
+      "toolBuckets": [
+        { "key": "TOOL_EDIT", "countBucket": "FEW" },
+        { "key": "TOOL_TEST", "countBucket": "ONE" }
+      ]
+    },
+    {
+      "clientSessionId": "unity-codex-20260514-001",
+      "sourceProvider": "CODEX",
+      "dayBucket": "2026-05-14",
+      "timeBucket": "HOUR_11",
+      "confidence": "HIGH",
+      "analyzerVersion": "unity-agent-analyzer.1",
+      "parserVersion": "codex-parser.1",
+      "sessionCountBucket": "ONE",
+      "interactionCountBucket": "MANY",
+      "warningIds": ["SAFE_AGGREGATE_ONLY"],
+      "categoryBuckets": [
+        { "key": "WORK_ARCHITECTURE", "countBucket": "ONE" },
+        { "key": "WORK_TEST", "countBucket": "FEW" }
+      ],
+      "languageBuckets": [
+        { "key": "LANG_TYPESCRIPT", "countBucket": "MANY" }
+      ],
+      "toolBuckets": [
+        { "key": "TOOL_BUILD", "countBucket": "ONE" },
+        { "key": "TOOL_TEST", "countBucket": "FEW" }
+      ]
+    },
+    {
+      "clientSessionId": "unity-unknown-agent-20260514-001",
+      "sourceProvider": "UNKNOWN_AGENT",
+      "dayBucket": "2026-05-14",
+      "timeBucket": "HOUR_12",
+      "confidence": "LOW",
+      "analyzerVersion": "unity-agent-analyzer.1",
+      "parserVersion": "unknown-agent-parser.1",
+      "sessionCountBucket": "ONE",
+      "interactionCountBucket": "FEW",
+      "warningIds": ["UNKNOWN_PROVIDER"],
+      "categoryBuckets": [
+        { "key": "WORK_UNKNOWN", "countBucket": "FEW" }
+      ],
+      "languageBuckets": [
+        { "key": "LANG_UNKNOWN", "countBucket": "FEW" }
+      ],
+      "toolBuckets": [
+        { "key": "TOOL_UNKNOWN", "countBucket": "FEW" }
+      ]
+    },
+    {
+      "clientSessionId": "unity-manual-20260514-001",
+      "sourceProvider": "MANUAL",
+      "dayBucket": "2026-05-14",
+      "timeBucket": "HOUR_13",
+      "confidence": "MEDIUM",
+      "analyzerVersion": "unity-manual.1",
+      "activityCategory": "WORK_DOCS",
+      "durationBucket": "M_30_60",
+      "warningIds": ["USER_ENTERED_SUMMARY"],
+      "categoryBuckets": [
+        { "key": "WORK_DOCS", "countBucket": "ONE" }
+      ],
+      "languageBuckets": [
+        { "key": "LANG_NONE", "countBucket": "NONE" }
+      ],
+      "toolBuckets": [
+        { "key": "TOOL_MANUAL", "countBucket": "ONE" }
+      ]
+    }
+  ]
+}

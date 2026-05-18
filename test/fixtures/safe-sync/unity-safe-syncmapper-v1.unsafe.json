@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "clientSyncId": "unity-sync-v1-unsafe-001",
+  "approvedLocations": ["/Users/developer/private-project"],
+  "sessions": [
+    {
+      "clientSessionId": "unity-unsafe-path-001",
+      "sourceProvider": "GIT",
+      "dayBucket": "2026-05-14",
+      "confidence": "HIGH",
+      "analyzerVersion": "/Users/developer/private-project",
+      "parserVersion": "safe-sync.1",
+      "hashedRepositoryId": "0123456789abcdef",
+      "changeCountBucket": "FEW",
+      "lineCountBucket": "MANY",
+      "commitCountBucket": "ONE",
+      "repoName": "private-project",
+      "branchName": "customer-secret-branch",
+      "fileName": "CustomerSecret.cs",
+      "warningIds": ["LOW_CONFIDENCE_RANGE"],
+      "categoryBuckets": [
+        { "key": "WORK_FEATURE", "countBucket": "FEW" }
+      ],
+      "languageBuckets": [
+        { "key": "LANG_CSHARP", "countBucket": "MANY" }
+      ],
+      "toolBuckets": [
+        { "key": "TOOL_GIT_COMMIT", "countBucket": "ONE" }
+      ]
+    },
+    {
+      "clientSessionId": "unity-unsafe-agent-001",
+      "sourceProvider": "CODEX",
+      "dayBucket": "2026-05-14",
+      "confidence": "HIGH",
+      "analyzerVersion": "unity-agent-analyzer.1",
+      "parserVersion": "codex-parser.1",
+      "sessionCountBucket": "ONE",
+      "interactionCountBucket": "MANY",
+      "command": "git status --short",
+      "prompt": "summarize the private implementation",
+      "response": "private implementation details",
+      "rawLog": "private raw log content",
+      "apiKey": "sk-abcdefghijklmnopqrstuvwxyz123456",
+      "sourceText": "function unsafeExample() {\n  const value = true;\n  return value;\n}\n",
+      "categoryBuckets": [
+        { "key": "WORK_FEATURE", "countBucket": "FEW" }
+      ],
+      "languageBuckets": [
+        { "key": "LANG_TYPESCRIPT", "countBucket": "MANY" }
+      ],
+      "toolBuckets": [
+        { "key": "TOOL_TEST", "countBucket": "FEW" }
+      ]
+    }
+  ]
+}

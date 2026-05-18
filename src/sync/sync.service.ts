@@ -1,13 +1,31 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { CharactersService } from '../characters/characters.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SessionsService } from '../sessions/sessions.service';
 import {
+  SafeActivitySessionDto,
+  SafeActivitySessionsQueryDto,
+  SafeActivitySessionsUpsertRequestDto,
+} from './dto/activity-session-sync.dto';
+import {
   AchievementSyncDto,
   SyncPullDto,
   SyncPushDto,
 } from './dto/sync.dto';
+import {
+  SafeSyncErrorCode,
+  SafeSyncPayloadValidator,
+} from './validators/safe-sync-payload.validator';
+import {
+  SafeActivitySessionRecord,
+  SyncRepository,
+} from './sync.repository';
 
 const SYNC_CHARACTER_SELECT = {
   id: true,
@@ -80,6 +98,8 @@ export class SyncService {
     private readonly prisma: PrismaService,
     private readonly characters: CharactersService,
     private readonly sessions: SessionsService,
+    private readonly syncRepository?: SyncRepository,
+    private readonly safeSyncValidator?: SafeSyncPayloadValidator,
   ) {}
 
   async pull(userId: string, dto: SyncPullDto = {}) {
@@ -244,6 +264,126 @@ export class SyncService {
       policy: 'additive-upsert',
       serverRevision,
       accepted,
+      serverTime: new Date().toISOString(),
+    };
+  }
+
+  async upsertActivitySessions(
+    userId: string,
+    dto: SafeActivitySessionsUpsertRequestDto,
+  ) {
+    const repository = this.requireActivityRepository();
+    const validator = this.requireSafeSyncValidator();
+    const envelopeValidation = validator.validateEnvelope(dto);
+    if (!envelopeValidation.safe) {
+      throw this.safeSyncBadRequest(
+        envelopeValidation.errorCode ?? 'VALIDATION_FAILED',
+      );
+    }
+
+    const startedAt = Date.now();
+    const results: Array<{
+      clientSessionId: string | null;
+      status: 'accepted' | 'rejected';
+      errorCode?: SafeSyncErrorCode;
+      serverSessionId?: string;
+    }> = [];
+    let acceptedCount = 0;
+    let rejectedCount = 0;
+    const rejectedCodes = new Set<SafeSyncErrorCode>();
+
+    for (const session of dto.sessions) {
+      const clientSessionId = this.safeClientSessionId(session);
+      const sessionValidation = validator.validateSession(session);
+      if (!sessionValidation.safe) {
+        const errorCode = sessionValidation.errorCode ?? 'VALIDATION_FAILED';
+        rejectedCount += 1;
+        rejectedCodes.add(errorCode);
+        results.push({
+          clientSessionId,
+          status: 'rejected',
+          errorCode,
+        });
+        continue;
+      }
+
+      const saved = await repository.upsertActivitySession(
+        userId,
+        session,
+        dto.schemaVersion,
+      );
+      acceptedCount += 1;
+      results.push({
+        clientSessionId,
+        status: 'accepted',
+        serverSessionId: saved.id,
+      });
+    }
+
+    this.logSafeActivitySync('safe_sync_activity_sessions_upsert', {
+      requestId: dto.requestId ?? dto.clientSyncId,
+      acceptedCount,
+      rejectedCount,
+      rejectedCodes: [...rejectedCodes],
+      sourceProviders: this.uniqueSourceProviders(dto.sessions),
+      schemaVersion: dto.schemaVersion,
+      durationMs: Date.now() - startedAt,
+    });
+
+    return {
+      success: rejectedCount === 0,
+      acceptedCount,
+      rejectedCount,
+      results,
+      serverTime: new Date().toISOString(),
+      schemaVersion: this.requireSafeSyncValidator().supportedSchemaVersion,
+    };
+  }
+
+  async listActivitySessions(
+    userId: string,
+    query: SafeActivitySessionsQueryDto,
+  ) {
+    const repository = this.requireActivityRepository();
+    const sessions = await repository.listActivitySessions(userId, query);
+    return {
+      sessions: sessions.map((session) => this.toSafeActivitySession(session)),
+      pagination: {
+        limit: query.limit ?? 50,
+        offset: query.offset ?? 0,
+        count: sessions.length,
+      },
+      serverTime: new Date().toISOString(),
+      schemaVersion: this.requireSafeSyncValidator().supportedSchemaVersion,
+    };
+  }
+
+  async deleteActivitySession(userId: string, id: string) {
+    const repository = this.requireActivityRepository();
+    const deleted = await repository.deleteActivitySession(userId, id);
+    if (!deleted) {
+      throw new NotFoundException({
+        errorCode: 'ACTIVITY_SESSION_NOT_FOUND',
+        message: 'Activity session was not found for this identity.',
+      });
+    }
+    return {
+      success: true,
+      deletedId: id,
+      serverTime: new Date().toISOString(),
+    };
+  }
+
+  getActivitySyncHealth() {
+    const validator = this.requireSafeSyncValidator();
+    return {
+      status: 'ok',
+      schemaVersion: validator.supportedSchemaVersion,
+      maxLimits: {
+        sessionsPerRequest: validator.maxSessionsPerRequest,
+        bucketsPerGroup: validator.maxBucketsPerGroup,
+        warningsPerSession: validator.maxWarningsPerSession,
+      },
       serverTime: new Date().toISOString(),
     };
   }
@@ -464,6 +604,43 @@ export class SyncService {
     };
   }
 
+  private toSafeActivitySession(session: SafeActivitySessionRecord) {
+    return {
+      id: session.id,
+      clientSessionId: session.clientSessionId,
+      sourceProvider: session.sourceProvider,
+      dayBucket: session.dayBucket,
+      timeBucket: session.timeBucket,
+      confidence: session.confidence,
+      warningIds: session.warnings.map((warning) => warning.warningId),
+      analyzerVersion: session.analyzerVersion,
+      parserVersion: session.parserVersion,
+      aggregateSchemaVersion: session.aggregateSchemaVersion,
+      hashedRepositoryId: session.hashedRepositoryId,
+      changeCountBucket: session.changeCountBucket,
+      lineCountBucket: session.lineCountBucket,
+      commitCountBucket: session.commitCountBucket,
+      sessionCountBucket: session.sessionCountBucket,
+      interactionCountBucket: session.interactionCountBucket,
+      activityCategory: session.activityCategory,
+      durationBucket: session.durationBucket,
+      categoryBuckets: session.categoryBuckets.map((bucket) => ({
+        key: bucket.bucketKey,
+        countBucket: bucket.countBucket,
+      })),
+      languageBuckets: session.languageBuckets.map((bucket) => ({
+        key: bucket.bucketKey,
+        countBucket: bucket.countBucket,
+      })),
+      toolBuckets: session.toolBuckets.map((bucket) => ({
+        key: bucket.bucketKey,
+        countBucket: bucket.countBucket,
+      })),
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
+    };
+  }
+
   private isRecord(value: unknown): value is Record<string, unknown> {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
   }
@@ -486,5 +663,70 @@ export class SyncService {
         serverRevision: fields.serverRevision,
       }),
     );
+  }
+
+  private safeSyncBadRequest(errorCode: SafeSyncErrorCode) {
+    return new BadRequestException({
+      errorCode,
+      message: 'Safe Sync payload failed privacy-safe validation.',
+    });
+  }
+
+  private safeClientSessionId(
+    session: SafeActivitySessionDto,
+  ): string | null {
+    return /^[A-Za-z0-9:_-]{1,128}$/.test(session.clientSessionId)
+      ? session.clientSessionId
+      : null;
+  }
+
+  private uniqueSourceProviders(sessions: SafeActivitySessionDto[]): string[] {
+    return [
+      ...new Set(
+        sessions
+          .map((session) => session.sourceProvider)
+          .filter((provider) => typeof provider === 'string'),
+      ),
+    ];
+  }
+
+  private logSafeActivitySync(
+    event: string,
+    fields: {
+      requestId?: string;
+      acceptedCount: number;
+      rejectedCount: number;
+      rejectedCodes: string[];
+      sourceProviders: string[];
+      schemaVersion: number;
+      durationMs: number;
+    },
+  ) {
+    this.logger.log(
+      JSON.stringify({
+        event,
+        requestId: fields.requestId,
+        acceptedCount: fields.acceptedCount,
+        rejectedCount: fields.rejectedCount,
+        rejectedCodes: fields.rejectedCodes,
+        sourceProviders: fields.sourceProviders,
+        schemaVersion: fields.schemaVersion,
+        durationMs: fields.durationMs,
+      }),
+    );
+  }
+
+  private requireActivityRepository(): SyncRepository {
+    if (!this.syncRepository) {
+      throw new Error('SyncRepository is not configured.');
+    }
+    return this.syncRepository;
+  }
+
+  private requireSafeSyncValidator(): SafeSyncPayloadValidator {
+    if (!this.safeSyncValidator) {
+      throw new Error('SafeSyncPayloadValidator is not configured.');
+    }
+    return this.safeSyncValidator;
   }
 }

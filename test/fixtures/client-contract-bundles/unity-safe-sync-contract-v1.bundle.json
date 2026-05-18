@@ -1,0 +1,308 @@
+{
+  "bundleVersion": 1,
+  "clientName": "TokenForgeUnityClient",
+  "clientSchemaVersion": 1,
+  "generatedAt": "2026-05-14T00:00:00.000Z",
+  "safeSyncMapperVersion": "unity-safe-sync-mapper.contract-v1",
+  "supportedSourceProviders": [
+    "MANUAL",
+    "GIT",
+    "CLAUDE",
+    "CODEX",
+    "UNKNOWN_AGENT"
+  ],
+  "supportedSchemaVersions": [1],
+  "mixedBehavior": "WHOLE_REQUEST_REJECTED_BY_DTO_VALIDATION",
+  "fixtures": {
+    "valid": {
+      "schemaVersion": 1,
+      "clientSyncId": "unity-sync-v1-001",
+      "sessions": [
+        {
+          "clientSessionId": "unity-git-20260514-001",
+          "sourceProvider": "GIT",
+          "dayBucket": "2026-05-14",
+          "timeBucket": "HOUR_09",
+          "confidence": "HIGH",
+          "analyzerVersion": "unity-git-analyzer.1",
+          "parserVersion": "safe-sync.1",
+          "hashedRepositoryId": "0123456789abcdef",
+          "changeCountBucket": "FEW",
+          "lineCountBucket": "MANY",
+          "commitCountBucket": "ONE",
+          "warningIds": ["LOW_CONFIDENCE_RANGE"],
+          "categoryBuckets": [
+            { "key": "WORK_FEATURE", "countBucket": "FEW" },
+            { "key": "WORK_TEST", "countBucket": "ONE" }
+          ],
+          "languageBuckets": [
+            { "key": "LANG_CSHARP", "countBucket": "MANY" },
+            { "key": "LANG_SHADER", "countBucket": "ONE" }
+          ],
+          "toolBuckets": [
+            { "key": "TOOL_GIT_COMMIT", "countBucket": "ONE" }
+          ]
+        },
+        {
+          "clientSessionId": "unity-claude-20260514-001",
+          "sourceProvider": "CLAUDE",
+          "dayBucket": "2026-05-14",
+          "timeBucket": "HOUR_10",
+          "confidence": "MEDIUM",
+          "analyzerVersion": "unity-agent-analyzer.1",
+          "parserVersion": "claude-parser.1",
+          "sessionCountBucket": "ONE",
+          "interactionCountBucket": "MANY",
+          "warningIds": ["PROVIDER_LOG_PARTIAL"],
+          "categoryBuckets": [
+            { "key": "WORK_REFACTOR", "countBucket": "FEW" }
+          ],
+          "languageBuckets": [
+            { "key": "LANG_CSHARP", "countBucket": "FEW" }
+          ],
+          "toolBuckets": [
+            { "key": "TOOL_EDIT", "countBucket": "FEW" },
+            { "key": "TOOL_TEST", "countBucket": "ONE" }
+          ]
+        },
+        {
+          "clientSessionId": "unity-codex-20260514-001",
+          "sourceProvider": "CODEX",
+          "dayBucket": "2026-05-14",
+          "timeBucket": "HOUR_11",
+          "confidence": "HIGH",
+          "analyzerVersion": "unity-agent-analyzer.1",
+          "parserVersion": "codex-parser.1",
+          "sessionCountBucket": "ONE",
+          "interactionCountBucket": "MANY",
+          "warningIds": ["SAFE_AGGREGATE_ONLY"],
+          "categoryBuckets": [
+            { "key": "WORK_ARCHITECTURE", "countBucket": "ONE" },
+            { "key": "WORK_TEST", "countBucket": "FEW" }
+          ],
+          "languageBuckets": [
+            { "key": "LANG_TYPESCRIPT", "countBucket": "MANY" }
+          ],
+          "toolBuckets": [
+            { "key": "TOOL_BUILD", "countBucket": "ONE" },
+            { "key": "TOOL_TEST", "countBucket": "FEW" }
+          ]
+        },
+        {
+          "clientSessionId": "unity-unknown-agent-20260514-001",
+          "sourceProvider": "UNKNOWN_AGENT",
+          "dayBucket": "2026-05-14",
+          "timeBucket": "HOUR_12",
+          "confidence": "LOW",
+          "analyzerVersion": "unity-agent-analyzer.1",
+          "parserVersion": "unknown-agent-parser.1",
+          "sessionCountBucket": "ONE",
+          "interactionCountBucket": "FEW",
+          "warningIds": ["UNKNOWN_PROVIDER"],
+          "categoryBuckets": [
+            { "key": "WORK_UNKNOWN", "countBucket": "FEW" }
+          ],
+          "languageBuckets": [
+            { "key": "LANG_UNKNOWN", "countBucket": "FEW" }
+          ],
+          "toolBuckets": [
+            { "key": "TOOL_UNKNOWN", "countBucket": "FEW" }
+          ]
+        },
+        {
+          "clientSessionId": "unity-manual-20260514-001",
+          "sourceProvider": "MANUAL",
+          "dayBucket": "2026-05-14",
+          "timeBucket": "HOUR_13",
+          "confidence": "MEDIUM",
+          "analyzerVersion": "unity-manual.1",
+          "activityCategory": "WORK_DOCS",
+          "durationBucket": "M_30_60",
+          "warningIds": ["USER_ENTERED_SUMMARY"],
+          "categoryBuckets": [
+            { "key": "WORK_DOCS", "countBucket": "ONE" }
+          ],
+          "languageBuckets": [
+            { "key": "LANG_NONE", "countBucket": "NONE" }
+          ],
+          "toolBuckets": [
+            { "key": "TOOL_MANUAL", "countBucket": "ONE" }
+          ]
+        }
+      ]
+    },
+    "mixed": {
+      "schemaVersion": 1,
+      "clientSyncId": "unity-sync-v1-mixed-001",
+      "sessions": [
+        {
+          "clientSessionId": "unity-mixed-git-001",
+          "sourceProvider": "GIT",
+          "dayBucket": "2026-05-14",
+          "timeBucket": "HOUR_14",
+          "confidence": "HIGH",
+          "analyzerVersion": "unity-git-analyzer.1",
+          "parserVersion": "safe-sync.1",
+          "hashedRepositoryId": "abcdef0123456789",
+          "changeCountBucket": "FEW",
+          "lineCountBucket": "MANY",
+          "commitCountBucket": "ONE",
+          "warningIds": ["LOW_CONFIDENCE_RANGE"],
+          "categoryBuckets": [
+            { "key": "WORK_FEATURE", "countBucket": "FEW" }
+          ],
+          "languageBuckets": [
+            { "key": "LANG_CSHARP", "countBucket": "MANY" }
+          ],
+          "toolBuckets": [
+            { "key": "TOOL_GIT_COMMIT", "countBucket": "ONE" }
+          ]
+        },
+        {
+          "clientSessionId": "unity-mixed-invalid-bucket-001",
+          "sourceProvider": "CODEX",
+          "dayBucket": "2026-05-14",
+          "timeBucket": "HOUR_15",
+          "confidence": "HIGH",
+          "analyzerVersion": "unity-agent-analyzer.1",
+          "parserVersion": "codex-parser.1",
+          "sessionCountBucket": "EVERYTHING",
+          "interactionCountBucket": "MANY",
+          "warningIds": ["SAFE_AGGREGATE_ONLY"],
+          "categoryBuckets": [
+            { "key": "WORK_FEATURE", "countBucket": "FEW" }
+          ],
+          "languageBuckets": [
+            { "key": "LANG_TYPESCRIPT", "countBucket": "MANY" }
+          ],
+          "toolBuckets": [
+            { "key": "TOOL_TEST", "countBucket": "FEW" }
+          ]
+        }
+      ]
+    },
+    "unsafe": {
+      "schemaVersion": 1,
+      "clientSyncId": "unity-sync-v1-unsafe-001",
+      "approvedLocations": ["/Users/developer/private-project"],
+      "sessions": [
+        {
+          "clientSessionId": "unity-unsafe-path-001",
+          "sourceProvider": "GIT",
+          "dayBucket": "2026-05-14",
+          "confidence": "HIGH",
+          "analyzerVersion": "/Users/developer/private-project",
+          "parserVersion": "safe-sync.1",
+          "hashedRepositoryId": "0123456789abcdef",
+          "changeCountBucket": "FEW",
+          "lineCountBucket": "MANY",
+          "commitCountBucket": "ONE",
+          "repoName": "private-project",
+          "branchName": "customer-secret-branch",
+          "fileName": "CustomerSecret.cs",
+          "warningIds": ["LOW_CONFIDENCE_RANGE"],
+          "categoryBuckets": [
+            { "key": "WORK_FEATURE", "countBucket": "FEW" }
+          ],
+          "languageBuckets": [
+            { "key": "LANG_CSHARP", "countBucket": "MANY" }
+          ],
+          "toolBuckets": [
+            { "key": "TOOL_GIT_COMMIT", "countBucket": "ONE" }
+          ]
+        },
+        {
+          "clientSessionId": "unity-unsafe-agent-001",
+          "sourceProvider": "CODEX",
+          "dayBucket": "2026-05-14",
+          "confidence": "HIGH",
+          "analyzerVersion": "unity-agent-analyzer.1",
+          "parserVersion": "codex-parser.1",
+          "sessionCountBucket": "ONE",
+          "interactionCountBucket": "MANY",
+          "command": "git status --short",
+          "prompt": "summarize the private implementation",
+          "response": "private implementation details",
+          "rawLog": "private raw log content",
+          "apiKey": "sk-abcdefghijklmnopqrstuvwxyz123456",
+          "sourceText": "function unsafeExample() {\n  const value = true;\n  return value;\n}\n",
+          "categoryBuckets": [
+            { "key": "WORK_FEATURE", "countBucket": "FEW" }
+          ],
+          "languageBuckets": [
+            { "key": "LANG_TYPESCRIPT", "countBucket": "MANY" }
+          ],
+          "toolBuckets": [
+            { "key": "TOOL_TEST", "countBucket": "FEW" }
+          ]
+        }
+      ]
+    }
+  },
+  "privacyExpectations": {
+    "approvedLocationsAreLocalOnly": true,
+    "rawFieldsNeverSynced": [
+      "prompt",
+      "rawPrompt",
+      "response",
+      "rawResponse",
+      "rawDiff",
+      "code",
+      "rawCode",
+      "sourceCode",
+      "source",
+      "sourceText",
+      "snippet",
+      "log",
+      "rawLog",
+      "claudeLog",
+      "codexLog",
+      "terminalOutput",
+      "stdout",
+      "stderr",
+      "absolutePath",
+      "filePath",
+      "filename",
+      "fileName",
+      "path",
+      "pathRaw",
+      "repoName",
+      "repositoryName",
+      "remoteUrl",
+      "gitRemote",
+      "gitRemoteUrl",
+      "branchName",
+      "rawBranchName",
+      "branchNameRaw",
+      "commitMessage",
+      "rawCommitMessage",
+      "commitMessageRaw",
+      "diff",
+      "patch",
+      "command",
+      "commandText",
+      "apiKey",
+      "secret",
+      "passwordRaw",
+      "password",
+      "username",
+      "authorization",
+      "tokenRaw",
+      "rawToken",
+      "refreshToken",
+      "apiToken",
+      "accessToken",
+      "secretToken",
+      "Authorization",
+      "Bearer",
+      "token",
+      "approvedLocation",
+      "approvedLocations",
+      "approvedLocationPath",
+      "approvedLocationSettings",
+      "localPath",
+      "localOnlyPath",
+      "localApprovedLocations"
+    ]
+  }
+}

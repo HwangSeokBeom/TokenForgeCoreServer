@@ -12,7 +12,19 @@
     "start:prod": "node dist/main.js",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "jest --runInBand",
+    "test:db:e2e": "scripts/run-db-e2e.sh",
+    "test:e2e": "npm run test:db:e2e",
     "test:watch": "jest --watch",
+    "openapi:validate": "ts-node scripts/validate-openapi-contract.ts",
+    "openapi:artifact": "scripts/build-openapi-artifact.sh",
+    "client-contract:validate": "ts-node scripts/validate-client-contract-bundle.ts",
+    "client-contract:artifact": "scripts/build-client-contract-artifact.sh",
+    "contract:all": "npm run openapi:validate && npm run client-contract:validate && npm run openapi:artifact && npm run client-contract:artifact",
+    "ci:fast": "npx prisma validate && npx prisma generate && npm run build && npm test && npm run lint",
+    "ci:db": "npx prisma generate && npm run test:db:e2e",
+    "ci:openapi": "npm run openapi:validate && npm run client-contract:validate && npm run openapi:artifact && npm run client-contract:artifact",
+    "ci:contract": "npm run ci:openapi",
+    "ci:all": "npm run ci:fast && npm run ci:openapi && npm run ci:db",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
@@ -24,8 +36,8 @@
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.4.15",
-    "@nestjs/throttler": "^6.3.0",
     "@nestjs/terminus": "^10.2.3",
+    "@nestjs/throttler": "^6.3.0",
     "@prisma/client": "^5.22.0",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
@@ -60,7 +72,8 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "yaml": "^2.9.0"
   },
   "jest": {
     "moduleFileExtensions": [

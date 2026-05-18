@@ -2,53 +2,72 @@ import { Injectable } from '@nestjs/common';
 import { ForbiddenPayloadException } from './forbidden-payload.exception';
 import { PrivacyPolicyOptions } from './privacy-policy.decorator';
 
+export const PRIVACY_GUARD_FORBIDDEN_FIELD_NAMES = [
+  'prompt',
+  'rawPrompt',
+  'response',
+  'rawResponse',
+  'rawDiff',
+  'code',
+  'rawCode',
+  'sourceCode',
+  'source',
+  'sourceText',
+  'snippet',
+  'log',
+  'rawLog',
+  'claudeLog',
+  'codexLog',
+  'terminalOutput',
+  'stdout',
+  'stderr',
+  'absolutePath',
+  'filePath',
+  'filename',
+  'fileName',
+  'path',
+  'pathRaw',
+  'repoName',
+  'repositoryName',
+  'remoteUrl',
+  'gitRemote',
+  'gitRemoteUrl',
+  'branchName',
+  'rawBranchName',
+  'branchNameRaw',
+  'commitMessage',
+  'rawCommitMessage',
+  'commitMessageRaw',
+  'diff',
+  'patch',
+  'command',
+  'commandText',
+  'apiKey',
+  'secret',
+  'passwordRaw',
+  'password',
+  'username',
+  'authorization',
+  'tokenRaw',
+  'rawToken',
+  'refreshToken',
+  'apiToken',
+  'accessToken',
+  'secretToken',
+  'Authorization',
+  'Bearer',
+  'token',
+  'approvedLocation',
+  'approvedLocations',
+  'approvedLocationPath',
+  'approvedLocationSettings',
+  'localPath',
+  'localOnlyPath',
+  'localApprovedLocations',
+] as const;
+
 const FORBIDDEN_KEYS = new Set(
-  [
-    'prompt',
-    'rawPrompt',
-    'rawDiff',
-    'code',
-    'rawCode',
-    'sourceCode',
-    'log',
-    'rawLog',
-    'claudeLog',
-    'codexLog',
-    'terminalOutput',
-    'stdout',
-    'stderr',
-    'absolutePath',
-    'filePath',
-    'path',
-    'pathRaw',
-    'remoteUrl',
-    'gitRemote',
-    'gitRemoteUrl',
-    'branchName',
-    'rawBranchName',
-    'branchNameRaw',
-    'commitMessage',
-    'rawCommitMessage',
-    'commitMessageRaw',
-    'diff',
-    'patch',
-    'command',
-    'commandText',
-    'apiKey',
-    'secret',
-    'passwordRaw',
-    'password',
-    'authorization',
-    'tokenRaw',
-    'rawToken',
-    'refreshToken',
-    'apiToken',
-    'accessToken',
-    'secretToken',
-    'Authorization',
-    'Bearer',
-    'token',
-  ].map((key) => key.toLowerCase()),
+  PRIVACY_GUARD_FORBIDDEN_FIELD_NAMES.map((key) => key.toLowerCase()),
 );
 
 const GLOBALLY_ALLOWED_KEYS = new Set(['tokenbucket']);
@@ -144,8 +163,36 @@ export class PrivacyGuardService {
       return;
     }
 
+    if (/sk-[A-Za-z0-9_-]{20,}/.test(value)) {
+      violations.push({ path, reason: 'raw_token_value' });
+      return;
+    }
+
+    if (/-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(value)) {
+      violations.push({ path, reason: 'raw_private_key_value' });
+      return;
+    }
+
     if (ABSOLUTE_PATH_PATTERNS.some((pattern) => pattern.test(value))) {
       violations.push({ path, reason: 'absolute_path_value' });
+      return;
+    }
+
+    if (
+      /(^|[\s"'([{])\.{0,2}[A-Za-z0-9_.-]+[\\/][^\s"'()]+\.[A-Za-z0-9]{1,8}\b/.test(
+        value,
+      )
+    ) {
+      violations.push({ path, reason: 'path_like_value' });
+      return;
+    }
+
+    if (
+      /^\s*(git|npm|npx|pnpm|yarn|node|python3?|bash|zsh|sh|curl|ssh|scp|kubectl|docker)\s+/.test(
+        value,
+      )
+    ) {
+      violations.push({ path, reason: 'raw_command_value' });
       return;
     }
 
